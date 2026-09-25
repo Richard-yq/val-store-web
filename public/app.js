@@ -133,24 +133,6 @@ const DOM = {
   authSourceDot: document.getElementById('authSourceDot'),
   authSourceLabel: document.getElementById('authSourceLabel'),
   authTabBtns: document.querySelectorAll('.auth-tab-btn'),
-  panelCredentials: document.getElementById('panelCredentials'),
-  credentialsLoginForm: document.getElementById('credentialsLoginForm'),
-  credShard: document.getElementById('credShard'),
-  credUsername: document.getElementById('credUsername'),
-  credPassword: document.getElementById('credPassword'),
-  btnTogglePassword: document.getElementById('btnTogglePassword'),
-  credErrorMsg: document.getElementById('credErrorMsg'),
-  btnSubmitCredentials: document.getElementById('btnSubmitCredentials'),
-  credSubmitText: document.getElementById('credSubmitText'),
-  credSpinner: document.getElementById('credSpinner'),
-  mfaContainer: document.getElementById('mfaContainer'),
-  mfaEmailTip: document.getElementById('mfaEmailTip'),
-  mfaCodeInput: document.getElementById('mfaCodeInput'),
-  btnSubmitMfa: document.getElementById('btnSubmitMfa'),
-  mfaBtnText: document.getElementById('mfaBtnText'),
-  mfaSpinner: document.getElementById('mfaSpinner'),
-  mfaErrorMsg: document.getElementById('mfaErrorMsg'),
-  btnBackToCred: document.getElementById('btnBackToCred'),
   panelOfficial: document.getElementById('panelOfficial'),
   officialShard: document.getElementById('officialShard'),
   btnLaunchOfficialAuth: document.getElementById('btnLaunchOfficialAuth'),
@@ -222,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     DOM.authSourceDot.classList.add('credentials');
     DOM.authSourceLabel.textContent = "官方登入";
     renderDailyStore(null);
-    openAuthModal('credentials');
+    openAuthModal('official');
   }
 });
 
@@ -305,167 +287,6 @@ function initAuthModal() {
     });
   });
 
-  // Toggle password visibility
-  if (DOM.btnTogglePassword && DOM.credPassword) {
-    DOM.btnTogglePassword.addEventListener('click', () => {
-      const isPwd = DOM.credPassword.type === 'password';
-      DOM.credPassword.type = isPwd ? 'text' : 'password';
-      DOM.btnTogglePassword.textContent = isPwd ? '🙈' : '👁️';
-    });
-  }
-
-  // Submit Credentials Form
-  if (DOM.credentialsLoginForm) {
-    DOM.credentialsLoginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await handleCredentialsLogin();
-    });
-  }
-  if (DOM.btnSubmitCredentials) {
-    DOM.btnSubmitCredentials.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await handleCredentialsLogin();
-    });
-  }
-
-  // Submit 2FA Code
-  if (DOM.btnSubmitMfa) {
-    DOM.btnSubmitMfa.addEventListener('click', async () => {
-      await handleMfaSubmit();
-    });
-  }
-  if (DOM.mfaCodeInput) {
-    DOM.mfaCodeInput.addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        await handleMfaSubmit();
-      }
-    });
-  }
-
-  // Back to Credentials from 2FA
-  if (DOM.btnBackToCred) {
-    DOM.btnBackToCred.addEventListener('click', () => {
-      AudioFX.play('click');
-      if (DOM.mfaContainer) DOM.mfaContainer.style.display = 'none';
-      if (DOM.credentialsLoginForm) DOM.credentialsLoginForm.style.display = 'block';
-      if (DOM.mfaErrorMsg) DOM.mfaErrorMsg.style.display = 'none';
-    });
-  }
-
-  // Handle credentials login
-  async function handleCredentialsLogin() {
-    const username = DOM.credUsername?.value.trim();
-    const password = DOM.credPassword?.value;
-    const shard = DOM.credShard?.value || 'ap';
-
-    if (!username || !password) {
-      if (DOM.credErrorMsg) {
-        DOM.credErrorMsg.style.display = 'block';
-        DOM.credErrorMsg.textContent = '請輸入 Riot 帳號與密碼';
-      }
-      return;
-    }
-
-    if (DOM.credErrorMsg) DOM.credErrorMsg.style.display = 'none';
-    if (DOM.credSpinner) DOM.credSpinner.style.display = 'inline-block';
-    if (DOM.credSubmitText) DOM.credSubmitText.textContent = '登入連線中...';
-    if (DOM.btnSubmitCredentials) DOM.btnSubmitCredentials.disabled = true;
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, shard })
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (data.status === 'multifactor') {
-        STATE.mfaSessionData = data.sessionId || data.cookies;
-        STATE.mfaShard = shard;
-        if (DOM.mfaEmailTip) DOM.mfaEmailTip.textContent = data.email || '註冊信箱';
-        if (DOM.credentialsLoginForm) DOM.credentialsLoginForm.style.display = 'none';
-        if (DOM.mfaContainer) DOM.mfaContainer.style.display = 'block';
-        if (DOM.mfaCodeInput) {
-          DOM.mfaCodeInput.value = '';
-          DOM.mfaCodeInput.focus();
-        }
-      } else if (res.ok && data.status === 'success' && data.session) {
-        saveSession(data.session);
-        AudioFX.play('fanfare');
-        closeAuthModal();
-        await loadStoreData();
-      } else {
-        if (DOM.credErrorMsg) {
-          DOM.credErrorMsg.style.display = 'block';
-          DOM.credErrorMsg.textContent = data.message || '登入失敗，請確認帳號密碼是否正確。';
-        }
-      }
-    } catch (err) {
-      if (DOM.credErrorMsg) {
-        DOM.credErrorMsg.style.display = 'block';
-        DOM.credErrorMsg.textContent = '連線失敗: ' + err.message;
-      }
-    } finally {
-      if (DOM.credSpinner) DOM.credSpinner.style.display = 'none';
-      if (DOM.credSubmitText) DOM.credSubmitText.textContent = '立即登入帳號';
-      if (DOM.btnSubmitCredentials) DOM.btnSubmitCredentials.disabled = false;
-    }
-  }
-
-  // Handle MFA Submit
-  async function handleMfaSubmit() {
-    const code = DOM.mfaCodeInput?.value.trim();
-    if (!code) {
-      if (DOM.mfaErrorMsg) {
-        DOM.mfaErrorMsg.style.display = 'block';
-        DOM.mfaErrorMsg.textContent = '請輸入 6 位數雙重驗證代碼';
-      }
-      DOM.mfaCodeInput?.focus();
-      return;
-    }
-
-    if (DOM.mfaErrorMsg) DOM.mfaErrorMsg.style.display = 'none';
-    if (DOM.mfaSpinner) DOM.mfaSpinner.style.display = 'inline-block';
-    if (DOM.mfaBtnText) DOM.mfaBtnText.textContent = '驗證中...';
-    if (DOM.btnSubmitMfa) DOM.btnSubmitMfa.disabled = true;
-
-    try {
-      const res = await fetch('/api/auth/2fa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: STATE.mfaSessionData,
-          cookies: STATE.mfaSessionData,
-          code,
-          shard: STATE.mfaShard || 'ap'
-        })
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.status === 'success' && data.session) {
-        saveSession(data.session);
-        AudioFX.play('fanfare');
-        closeAuthModal();
-        await loadStoreData();
-      } else {
-        if (DOM.mfaErrorMsg) {
-          DOM.mfaErrorMsg.style.display = 'block';
-          DOM.mfaErrorMsg.textContent = data.message || '驗證碼錯誤或已過期，請重試。';
-        }
-      }
-    } catch (err) {
-      if (DOM.mfaErrorMsg) {
-        DOM.mfaErrorMsg.style.display = 'block';
-        DOM.mfaErrorMsg.textContent = '連線失敗: ' + err.message;
-      }
-    } finally {
-      if (DOM.mfaSpinner) DOM.mfaSpinner.style.display = 'none';
-      if (DOM.mfaBtnText) DOM.mfaBtnText.textContent = '確認驗證碼';
-      if (DOM.btnSubmitMfa) DOM.btnSubmitMfa.disabled = false;
-    }
-  }
-
   // Switch back to Lockfile
   DOM.btnSwitchLockfile.addEventListener('click', async () => {
     AudioFX.play('click');
@@ -492,16 +313,9 @@ function initAuthModal() {
       DOM.officialAuthBtnText.textContent = "前往 Riot 官方網站登入";
       DOM.officialAuthSpinner.style.display = 'none';
       DOM.authAutoIndicator.classList.remove('waiting');
-      DOM.authStatusText.textContent = "本機模式支援自動偵測：若視窗跳轉成功將自動載入商城";
+      DOM.authStatusText.textContent = "支援自動偵測：跳轉完成或複製網址後切回此頁面將自動載入商城";
     }
     if (DOM.officialErrorMsg) DOM.officialErrorMsg.style.display = 'none';
-    if (DOM.credErrorMsg) DOM.credErrorMsg.style.display = 'none';
-    if (DOM.mfaErrorMsg) DOM.mfaErrorMsg.style.display = 'none';
-    if (DOM.credentialsLoginForm) DOM.credentialsLoginForm.style.display = 'block';
-    if (DOM.mfaContainer) DOM.mfaContainer.style.display = 'none';
-    if (DOM.credSpinner) DOM.credSpinner.style.display = 'none';
-    if (DOM.credSubmitText) DOM.credSubmitText.textContent = '立即登入帳號';
-    if (DOM.btnSubmitCredentials) DOM.btnSubmitCredentials.disabled = false;
   }
 
   // Quick Clipboard Load
@@ -629,15 +443,22 @@ function initAuthModal() {
   });
 
   // 4. Focus / Visibility listener (automatically checks clipboard if copied)
-  window.addEventListener('focus', async () => {
-    if (DOM.authModal.classList.contains('open') && DOM.btnLaunchOfficialAuth.disabled) {
+  async function checkClipboardForToken() {
+    if (!STATE.session) {
       try {
         const clip = await navigator.clipboard.readText();
         if (clip && (clip.includes('access_token=') || clip.startsWith('eyJ'))) {
-          const shard = DOM.officialShard.value || 'ap';
+          const shard = DOM.officialShard?.value || localStorage.getItem('val_preferred_shard') || 'ap';
           await executeTokenLogin(clip, shard);
         }
       } catch(e) {}
+    }
+  }
+
+  window.addEventListener('focus', checkClipboardForToken);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkClipboardForToken();
     }
   });
 
@@ -679,16 +500,13 @@ function switchAuthTab(tabName) {
   DOM.authTabBtns.forEach(b => {
     b.classList.toggle('active', b.dataset.authtab === tabName);
   });
-  if (DOM.panelCredentials) DOM.panelCredentials.classList.toggle('active', tabName === 'credentials');
   if (DOM.panelOfficial) DOM.panelOfficial.classList.toggle('active', tabName === 'official');
   if (DOM.panelLockfile) DOM.panelLockfile.classList.toggle('active', tabName === 'lockfile');
 }
 
-function openAuthModal(defaultTab = 'credentials') {
+function openAuthModal(defaultTab = 'official') {
   DOM.authModal.classList.add('open');
   if (DOM.officialErrorMsg) DOM.officialErrorMsg.style.display = 'none';
-  if (DOM.credErrorMsg) DOM.credErrorMsg.style.display = 'none';
-  if (DOM.mfaErrorMsg) DOM.mfaErrorMsg.style.display = 'none';
   resetAuthBtn();
   switchAuthTab(defaultTab);
 
@@ -827,23 +645,19 @@ function renderMainLoginCard() {
         <span style="font-size: 0.82rem; color: var(--val-cyan);">🔒 密碼透過加密直連原廠 API，或使用官方網頁跳轉，絕不外洩。</span>
       </p>
 
-      <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
-        <button type="button" class="tactical-action-btn primary-btn" id="btnMainOpenCredentials" style="width: 100%; margin: 0; padding: 1.15rem 1.25rem; font-size: 1.05rem; font-weight: 800;">
-          <span>🔥 輸入 Riot 帳密快速登入 (手機 / 雲端推薦，免跳轉)</span>
-        </button>
-
-        <button type="button" class="tactical-action-btn secondary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 0.85rem 1.25rem; font-size: 0.95rem; border-color: rgba(255, 255, 255, 0.2);">
+      <div style="margin-bottom: 1.5rem;">
+        <button type="button" class="tactical-action-btn primary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 1.15rem 1.25rem; font-size: 1.05rem; font-weight: 800;">
           <svg viewBox="0 0 24 24" fill="currentColor" class="riot-fist-icon"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
-          <span>🌐 前往 Riot 官方網站登入 (auth.riotgames.com)</span>
+          <span>🌐 前往 Riot 官方網站安全登入 (auth.riotgames.com)</span>
         </button>
       </div>
 
       <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem; margin-bottom: 1.25rem; text-align: left;">
-        <div style="font-size: 0.82rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上網址或讀取剪貼簿：</div>
-        <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.6rem; line-height: 1.45;">
-          📱 <strong>手機用戶重要提示：</strong>若使用上方官方跳轉，登入後若畫面顯示「無法連線至 localhost」為 Riot 官方正常機制（Token 已存在網址列）。請直接點擊手機上方網址列「複製網址」，回本頁按「一鍵讀取剪貼簿」即可！
+        <div style="font-size: 0.85rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上跳轉網址或讀取剪貼簿：</div>
+        <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5;">
+          📱 <strong>跨裝置 / 手機登入提示：</strong>登入後若網址跳轉至 <code>localhost/redirect#access_token=...</code>（顯示連線失敗為 Riot 官方原廠機制），請<strong>直接複製上方網址列整行連結</strong>，切回此頁面點擊「一鍵讀取剪貼簿」即可瞬間載入商城！
         </div>
-        <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.7rem; font-weight: 700;">
+        <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.75rem; font-weight: 700;">
           📋 一鍵讀取剪貼簿並載入商城
         </button>
         <div class="url-input-wrapper">
@@ -867,14 +681,6 @@ function renderMainLoginCard() {
 }
 
 function initMainCardEvents() {
-  const btnMainOpenCredentials = document.getElementById('btnMainOpenCredentials');
-  if (btnMainOpenCredentials) {
-    btnMainOpenCredentials.onclick = () => {
-      AudioFX.play('click');
-      openAuthModal('credentials');
-    };
-  }
-
   const btnMainLaunchRiot = document.getElementById('btnMainLaunchRiot');
   if (btnMainLaunchRiot) {
     btnMainLaunchRiot.onclick = () => {

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
-  <link rel="stylesheet" href="style.css?v=2.8">
+  <link rel="stylesheet" href="style.css?v=2.9">
 </head>
 <body>
   <!-- Ambient Background Gradients -->
@@ -158,23 +158,19 @@
               <span style="font-size: 0.82rem; color: var(--val-cyan);">🔒 每次皆強制要求輸入帳密，密碼直接在原廠輸入，絕不經由第三方伺服器。</span>
             </p>
 
-            <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
-              <button type="button" class="tactical-action-btn primary-btn" id="btnMainOpenCredentials" style="width: 100%; margin: 0; padding: 1.15rem 1.25rem; font-size: 1.05rem; font-weight: 800;">
-                <span>🔥 輸入 Riot 帳密快速登入 (手機 / 雲端推薦，免跳轉)</span>
-              </button>
-
-              <button type="button" class="tactical-action-btn secondary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 0.85rem 1.25rem; font-size: 0.95rem; border-color: rgba(255, 255, 255, 0.2);">
+            <div style="margin-bottom: 1.5rem;">
+              <button type="button" class="tactical-action-btn primary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 1.15rem 1.25rem; font-size: 1.05rem; font-weight: 800;">
                 <svg viewBox="0 0 24 24" fill="currentColor" class="riot-fist-icon"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
-                <span>🌐 前往 Riot 官方網站登入 (auth.riotgames.com)</span>
+                <span>🌐 前往 Riot 官方網站安全登入 (auth.riotgames.com)</span>
               </button>
             </div>
 
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem; margin-bottom: 1.25rem; text-align: left;">
-              <div style="font-size: 0.82rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上網址或讀取剪貼簿：</div>
-              <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.6rem; line-height: 1.45;">
-                📱 <strong>手機用戶重要提示：</strong>若使用上方官方跳轉，登入後若畫面顯示「無法連線至 localhost」為 Riot 官方正常機制（Token 已存在網址列）。請直接點擊手機上方網址列「複製網址」，回本頁按「一鍵讀取剪貼簿」即可！
+              <div style="font-size: 0.85rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上跳轉網址或讀取剪貼簿：</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5;">
+                📱 <strong>跨裝置 / 手機登入提示：</strong>登入後若網址跳轉至 <code>localhost/redirect#access_token=...</code>（顯示連線失敗為 Riot 官方原廠機制），請<strong>直接複製上方網址列整行連結</strong>，切回此頁面點擊「一鍵讀取剪貼簿」即可瞬間載入商城！
               </div>
-              <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.7rem; font-weight: 700;">
+              <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.75rem; font-weight: 700;">
                 📋 一鍵讀取剪貼簿並載入商城
               </button>
               <div class="url-input-wrapper">
@@ -303,85 +299,16 @@
 
         <!-- Auth Tabs -->
         <div class="auth-tabs">
-          <button class="auth-tab-btn active" data-authtab="credentials">
-            <span>🔥</span> Riot 帳密快速登入 (手機 / 雲端推薦)
-          </button>
-          <button class="auth-tab-btn" data-authtab="official">
-            <span>🌐</span> 官方網頁跳轉 / Token
+          <button class="auth-tab-btn active" data-authtab="official">
+            <span>🌐</span> Riot 官方網頁安全跳轉 / Token
           </button>
           <button class="auth-tab-btn" data-authtab="lockfile">
             <span>🎮</span> 本機遊戲端同步
           </button>
         </div>
 
-        <!-- Panel 1: Direct Riot Credentials Login (Zero Localhost Dependency) -->
-        <div class="auth-panel active" id="panelCredentials">
-          <form id="credentialsLoginForm" class="auth-form" onsubmit="return false;">
-            <div class="form-group">
-              <label for="credShard">伺服器分區 (REGION)</label>
-              <select id="credShard" class="tactical-input">
-                <option value="ap" selected>亞太地區 (AP - 台灣 / 香港 / 日本 / 東南亞)</option>
-                <option value="na">北美地區 (NA)</option>
-                <option value="eu">歐洲地區 (EU)</option>
-                <option value="kr">韓國地區 (KR)</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="credUsername">RIOT 帳號 (USERNAME)</label>
-              <input type="text" id="credUsername" class="tactical-input" placeholder="請輸入 Riot 登入帳號" autocomplete="username" required />
-            </div>
-
-            <div class="form-group">
-              <label for="credPassword">RIOT 密碼 (PASSWORD)</label>
-              <div class="password-wrapper">
-                <input type="password" id="credPassword" class="tactical-input" placeholder="請輸入 Riot 帳號密碼" autocomplete="current-password" required />
-                <button type="button" class="btn-toggle-pwd" id="btnTogglePassword" title="顯示/隱藏密碼">👁️</button>
-              </div>
-            </div>
-
-            <div class="auth-msg error" id="credErrorMsg" style="display: none;"></div>
-
-            <button type="submit" class="tactical-action-btn primary-btn" id="btnSubmitCredentials" style="width: 100%;">
-              <span id="credSubmitText">立即登入帳號</span>
-              <span class="btn-spinner" id="credSpinner" style="display: none;"></span>
-            </button>
-          </form>
-
-          <!-- 2FA Verification Form (Initially Hidden) -->
-          <div class="mfa-section" id="mfaContainer" style="display: none;">
-            <div class="mfa-header">
-              <div class="mfa-shield-icon">🛡️</div>
-              <h3 class="mfa-title">雙重安全驗證 (2FA)</h3>
-              <p class="mfa-desc">
-                驗證代碼已發送至您的信箱：<br/>
-                <strong id="mfaEmailTip">email@***.com</strong>
-              </p>
-            </div>
-
-            <div class="form-group">
-              <input type="text" id="mfaCodeInput" class="tactical-input mfa-input" placeholder="------" maxlength="6" autocomplete="one-time-code" />
-            </div>
-
-            <div class="auth-msg error" id="mfaErrorMsg" style="display: none; margin-bottom: 0.75rem;"></div>
-
-            <div class="mfa-actions">
-              <button type="button" class="tactical-action-btn secondary-btn" id="btnBackToCred">返回修改</button>
-              <button type="button" class="tactical-action-btn primary-btn" id="btnSubmitMfa">
-                <span id="mfaBtnText">確認驗證碼</span>
-                <span class="btn-spinner" id="mfaSpinner" style="display: none;"></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="security-tip">
-            <span class="tip-icon">🛡️</span>
-            <span><strong>📱 手機免跳轉保障：</strong>帳號密碼直接透過 HTTPS 加密傳送至 Riot 官方認證 API，由雲端直接取得商城 Session，<strong>完全不經過 localhost</strong>，跨設備皆能順暢登入！</span>
-          </div>
-        </div>
-
-        <!-- Panel 2: Official Riot Web Auth -->
-        <div class="auth-panel" id="panelOfficial">
+        <!-- Panel 1: Official Riot Web Auth -->
+        <div class="auth-panel active" id="panelOfficial">
           <div class="official-login-box">
             <div class="form-group" style="margin-bottom: 1rem;">
               <label for="officialShard">伺服器分區 (REGION)</label>
@@ -419,7 +346,7 @@
 
             <div class="auth-auto-indicator" id="authAutoIndicator" style="margin-top: 1rem;">
               <span class="pulse-dot"></span>
-              <span id="authStatusText">本機模式支援自動偵測：若視窗跳轉成功將自動載入商城</span>
+              <span id="authStatusText">支援自動偵測：跳轉完成或複製網址後切回此頁面將自動載入商城</span>
             </div>
 
             <div class="auth-msg error" id="officialErrorMsg" style="display: none; margin-top: 0.75rem;"></div>
@@ -518,6 +445,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=2.8"></script>
+  <script src="app.js?v=2.9"></script>
 </body>
 </html>

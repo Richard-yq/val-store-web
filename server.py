@@ -989,9 +989,15 @@ OAUTH_REDIRECT_HTML = """<!DOCTYPE html>
     const hash = window.location.hash;
     const searchParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : '');
-    let target = searchParams.get('state') || hashParams.get('state') || 'http://localhost:3000';
-    if (!target.startsWith('http')) {
-      target = 'http://localhost:3000';
+    let rawState = hashParams.get('state') || searchParams.get('state');
+    if (rawState) {
+      try { rawState = decodeURIComponent(rawState); } catch(e) {}
+    }
+
+    // Priority: target from state param -> otherwise return to public deployed URL (never hardcoded to localhost:3000)
+    let target = rawState;
+    if (!target || !target.startsWith('http') || target.includes('localhost:3000')) {
+      target = 'https://venerable-cheesecake-da5d83.netlify.app';
     }
 
     if (window.opener && !window.opener.closed) {
@@ -1007,7 +1013,7 @@ OAUTH_REDIRECT_HTML = """<!DOCTYPE html>
     } catch(e) {}
 
     setTimeout(() => {
-      const cleanTarget = target.replace(/\\/+$/, '');
+      const cleanTarget = target.replace(/\/+$/, '');
       const cleanHash = hash.startsWith('#') ? hash : '#' + hash;
       window.location.replace(cleanTarget + '/' + cleanHash);
     }, 400);
