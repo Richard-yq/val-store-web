@@ -907,7 +907,7 @@ class ValStoreHandler(SimpleHTTPRequestHandler):
             return
 
         elif self.path.startswith("/api/auth/2fa"):
-            session_id = body.get("sessionId")
+            session_id = body.get("sessionId") or body.get("cookies")
             code = body.get("code", "").strip()
             shard = body.get("shard", "ap")
             if not session_id or not code:

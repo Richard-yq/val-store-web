@@ -76,7 +76,8 @@ exports.handler = async (event, context) => {
     // 4. Two-Factor Authentication (2FA) Submit
     if (path === "/auth/2fa" && method === "POST") {
       const body = JSON.parse(event.body || "{}");
-      const { cookies, code, shard = "ap" } = body;
+      const cookies = body.cookies || body.sessionId;
+      const { code, shard = "ap" } = body;
 
       if (!cookies || !code) {
         return jsonResponse({ status: "error", message: "缺少驗證憑證或驗證碼" }, 400);
