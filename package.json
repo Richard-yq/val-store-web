@@ -1,0 +1,20 @@
+{
+  "name": "val-store-web",
+  "version": "1.0.0",
+  "description": "VALORANT Protocol Store & Night Market Web Dashboard",
+  "main": "server.py",
+  "scripts": {
+    "start": "python server.py"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "valorant",
+    "store",
+    "night-market",
+    "riot-games"
+  ],
+  "author": "",
+  "license": "MIT"
+}

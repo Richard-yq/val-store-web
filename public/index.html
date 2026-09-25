@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VALORANT // 每日商城與夜市特惠儀表板</title>
+  <meta name="description" content="專屬特戰英豪每日商城、夜市特惠、精選組合包與玩家資產安全檢視系統">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="stylesheet" href="style.css?v=2.6">
+</head>
+<body>
+  <!-- Ambient Background Gradients -->
+  <div class="bg-fx">
+    <div class="ambient-glow glow-red"></div>
+    <div class="ambient-glow glow-blue"></div>
+    <div class="ambient-glow glow-purple" id="nightMarketGlow"></div>
+    <div class="cyber-grid"></div>
+    <div class="scanlines"></div>
+  </div>
+
+  <div id="app" class="app-layout">
+    <!-- Top Tactical Navigation Bar -->
+    <header class="tactical-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="v-icon">
+            <svg viewBox="0 0 100 100" fill="currentColor">
+              <polygon points="10,15 50,85 40,85 0,15"/>
+              <polygon points="60,15 100,85 90,85 50,15"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-sub">// PROTOCOL STORE //</span>
+            <h1 class="brand-title">VALORANT STATION</h1>
+          </div>
+        </div>
+        
+        <div class="system-status" id="systemStatus">
+          <span class="status-dot" id="statusDot" style="background: var(--val-red); box-shadow: 0 0 10px var(--val-red-glow);"></span>
+          <span class="status-label" id="statusText" style="color: var(--val-red);">○ 請登入 Riot 官方帳號</span>
+        </div>
+      </div>
+
+      <!-- Right: Auth Switcher, Player & Wallet -->
+      <div class="header-right">
+        <!-- Auth Mode / Account Switcher Button -->
+        <button class="auth-mode-chip" id="btnOpenAuthModal" title="點擊進行 Riot 官方登入或切換登入方式">
+          <span class="auth-source-dot credentials" id="authSourceDot"></span>
+          <span class="auth-source-label" id="authSourceLabel">官方登入</span>
+          <span class="auth-switch-icon">⇄</span>
+        </button>
+
+        <!-- Player Identity -->
+        <div class="player-card-chip" id="playerChip">
+          <div class="player-avatar-box">
+            <span class="agent-avatar-placeholder" id="playerAvatarLetter">VAL</span>
+          </div>
+          <div class="player-meta">
+            <span class="player-tag" id="playerTagline">載入中...</span>
+            <span class="player-name" id="playerName">特務</span>
+          </div>
+        </div>
+
+        <!-- Wallet Chips -->
+        <div class="wallet-bar">
+          <!-- Valorant Points -->
+          <div class="wallet-chip vp" title="特務幣 (Valorant Points)">
+            <div class="currency-icon vp-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
+            </div>
+            <span class="currency-value" id="walletVp">--</span>
+          </div>
+
+          <!-- Radianite Points -->
+          <div class="wallet-chip rp" title="輻能點數 (Radianite Points)">
+            <div class="currency-icon rp-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg>
+            </div>
+            <span class="currency-value" id="walletRp">--</span>
+          </div>
+
+          <!-- Kingdom Credits -->
+          <div class="wallet-chip kc" title="王國點數 (Kingdom Credits)">
+            <div class="currency-icon kc-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 2.5L18 8v8l-6 3.75L6 16V8l6-3.5z"/></svg>
+            </div>
+            <span class="currency-value" id="walletKc">--</span>
+          </div>
+
+          <!-- Refresh Button -->
+          <button id="btnRefresh" class="tactical-btn-icon" title="重新整理商城">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tactical-nav">
+      <div class="nav-container">
+        <button class="nav-tab active" data-tab="daily">
+          <span class="tab-icon">⚡</span>
+          <span class="tab-label">每日商城</span>
+          <span class="tab-badge" id="dailyBadge">4</span>
+        </button>
+
+        <button class="nav-tab" data-tab="nightmarket" id="nightMarketTabBtn">
+          <span class="tab-icon">🌙</span>
+          <span class="tab-label">夜市特惠</span>
+          <span class="tab-badge glow" id="nightMarketBadge">特惠開放中</span>
+        </button>
+
+        <button class="nav-tab" data-tab="bundle">
+          <span class="tab-icon">📦</span>
+          <span class="tab-label">精選組合包</span>
+        </button>
+
+        <button class="nav-tab" data-tab="wishlist">
+          <span class="tab-icon">⭐</span>
+          <span class="tab-label">心願單追蹤</span>
+          <span class="tab-badge" id="wishlistCountBadge">0</span>
+        </button>
+      </div>
+
+      <!-- Wishlist Match Toast Banner (Hidden by default) -->
+      <div class="wishlist-alert-banner" id="wishlistAlertBanner" style="display: none;">
+        <span class="alert-icon">✨</span>
+        <span class="alert-text" id="wishlistAlertText">狂賀！今日商城有符合您心願單的造型！</span>
+      </div>
+    </nav>
+
+    <!-- Main Views Container -->
+    <main class="content-viewport">
+      <!-- 1. Daily Store Tab -->
+      <section class="tab-content active" id="tabDaily">
+        <div class="section-header">
+          <div class="title-cluster">
+            <span class="cluster-sub">// 24小時限時輪替</span>
+            <h2 class="section-title">每日特選造型</h2>
+          </div>
+          <div class="countdown-card">
+            <span class="timer-label">距離商城刷新還有</span>
+            <div class="timer-display" id="dailyTimer">--:--:--</div>
+          </div>
+        </div>
+
+        <!-- 4 Daily Skin Cards Grid / Login Stage -->
+        <div class="skins-grid" id="dailySkinsGrid">
+          <div class="empty-state login-prompt-card" style="grid-column: 1 / -1; padding: 2.5rem 1.5rem; text-align: center; background: rgba(15, 25, 35, 0.85); border: 1px solid rgba(255, 70, 85, 0.3); border-radius: 8px; max-width: 600px; margin: 1rem auto; width: 100%;">
+            <div class="empty-state-icon" style="font-size: 2.8rem; margin-bottom: 0.75rem;">🛡️</div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem; font-weight: 800; color: #fff; letter-spacing: 1px;">特戰英豪 帳號登入</h2>
+            <p style="font-size: 0.92rem; margin-bottom: 1.5rem; color: var(--text-secondary); line-height: 1.5;">
+              請登入您的 Riot 帳號，以取得今日特選造型與夜市特惠！
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+              <button type="button" class="tactical-action-btn primary-btn" id="btnMainOpenCredentials" style="width: 100%; margin: 0; padding: 1rem 1.25rem; font-size: 1.05rem;">
+                <span>🔥 輸入 Riot 帳密快速登入 (Recon-Bolt 模式)</span>
+              </button>
+
+              <button type="button" class="tactical-action-btn secondary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 0.85rem 1.25rem; font-size: 0.95rem; border-color: rgba(255, 255, 255, 0.2);">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="riot-fist-icon"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
+                <span>🌐 前往 Riot 官方網站登入 (auth.riotgames.com)</span>
+              </button>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem; margin-bottom: 1.25rem; text-align: left;">
+              <div style="font-size: 0.82rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上網址或讀取剪貼簿：</div>
+              <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.7rem; font-weight: 700;">
+                📋 一鍵讀取剪貼簿並載入商城
+              </button>
+              <div class="url-input-wrapper">
+                <input type="text" id="mainRedirectUrlInput" class="tactical-input" placeholder="貼上跳轉網址 (http://localhost/redirect#... 或 Token)" />
+                <button type="button" class="btn-paste-clipboard" id="btnMainSubmitUrl">確認載入</button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-text-link" id="btnMainSyncLockfile" style="color: var(--val-cyan); font-size: 0.9rem;">
+                🎮 電腦正在執行特戰英豪？點此一鍵免登入同步
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Night Market Tab -->
+      <section class="tab-content" id="tabNightmarket">
+        <div class="nightmarket-banner">
+          <div class="nm-ambient-header">
+            <div class="nm-badge-pill">NIGHT.MARKET // 不定期限定</div>
+            <h2 class="nm-title">夜市特惠專區</h2>
+            <p class="nm-desc">點擊神祕卡牌翻面，解鎖為您專屬訂製的絕版折扣與優惠價格</p>
+          </div>
+          <div class="nm-controls">
+            <div class="countdown-card nm-timer-box">
+              <span class="timer-label">夜市結束剩餘</span>
+              <div class="timer-display nm-timer" id="nightMarketTimer">--天 --時 --分</div>
+            </div>
+            <button class="nm-reveal-btn" id="btnRevealAll">
+              <span class="reveal-icon">🎴</span> 一鍵翻開全部卡片
+            </button>
+          </div>
+        </div>
+
+        <!-- 6 Tarot-Style Night Market Cards -->
+        <div class="nightmarket-grid" id="nightMarketGrid">
+          <!-- Dynamic 6 Cards Rendered Here -->
+        </div>
+      </section>
+
+      <!-- 3. Featured Bundle Tab -->
+      <section class="tab-content" id="tabBundle">
+        <div class="bundle-hero" id="bundleHero">
+          <div class="bundle-cover" id="bundleCover">
+            <div class="bundle-overlay"></div>
+            <div class="bundle-meta">
+              <span class="bundle-tag">// FEATURED COLLECTION</span>
+              <h2 class="bundle-name" id="bundleName">精選特惠組合包</h2>
+              <div class="bundle-time-chip">
+                <span class="clock-icon">⏳</span> 剩餘時間：<span id="bundleTimer">計算中...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bundle-items-section">
+          <h3 class="subsection-title">組合包內含物品</h3>
+          <div class="bundle-items-grid" id="bundleItemsGrid"></div>
+        </div>
+      </section>
+
+      <!-- 4. Wishlist Tab -->
+      <section class="tab-content" id="tabWishlist">
+        <div class="wishlist-header">
+          <div class="title-cluster">
+            <span class="cluster-sub">// 自訂收藏與商城提醒</span>
+            <h2 class="section-title">我的造型心願單</h2>
+            <p class="wishlist-desc">在此搜尋全特戰英豪 1,400+ 款造型並加入心願單。當每日商城或夜市刷新出心願造型時，系統會第一時間高亮警報！</p>
+          </div>
+
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="skinSearchInput" placeholder="搜尋造型名稱 (例：暴徒、掠奪、混沌、惡鬼...)" />
+            <span class="search-count" id="searchCount"></span>
+          </div>
+        </div>
+
+        <!-- Wishlist Active Items -->
+        <div class="wishlist-active-section">
+          <h3 class="subsection-title">已追蹤的心願造型 (<span id="trackedCount">0</span>)</h3>
+          <div class="wishlist-tracked-grid" id="trackedSkinsGrid">
+            <div class="empty-state">尚無追蹤中的造型，請於下方搜尋並點擊星號加入心願單！</div>
+          </div>
+        </div>
+
+        <!-- Skin Catalog Grid -->
+        <div class="catalog-section">
+          <h3 class="subsection-title">造型資料庫瀏覽</h3>
+          <div class="catalog-grid" id="catalogGrid"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Tactical Footer -->
+    <footer class="tactical-footer">
+      <div class="footer-left">
+        <span>VALORANT PROTOCOL STORE WEB // 安全本機專屬實體</span>
+        <span class="dot-sep">•</span>
+        <span class="secure-badge">🔒 支援本地 Lockfile 免密通訊與 Riot 官方直連驗證</span>
+      </div>
+      <div class="footer-right">
+        <span>圖資由 Valorant-API.com 提供</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal: Authentication & Account Switcher -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-dialog auth-modal-dialog">
+      <button class="modal-close-btn" id="authModalCloseBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <div class="auth-modal-content">
+        <div class="auth-modal-header">
+          <span class="auth-subtitle">// AUTHENTICATION PROTOCOL //</span>
+          <h2 class="auth-title">特戰英豪 帳號安全登入</h2>
+          <p class="auth-desc">直接透過 Riot 官方授權登入，或一鍵同步本機遊戲客戶端。</p>
+        </div>
+
+        <!-- Auth Tabs -->
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" data-authtab="credentials">
+            <span>🔥</span> Riot 帳密登入 (Recon-Bolt 模式)
+          </button>
+          <button class="auth-tab-btn" data-authtab="official">
+            <span>🌐</span> 官方網頁跳轉 / Token
+          </button>
+          <button class="auth-tab-btn" data-authtab="lockfile">
+            <span>🎮</span> 本機遊戲端同步
+          </button>
+        </div>
+
+        <!-- Panel 1: Recon-Bolt Credentials Direct Login -->
+        <div class="auth-panel active" id="panelCredentials">
+          <form id="credentialsLoginForm" class="auth-form" onsubmit="return false;">
+            <div class="form-group">
+              <label for="credShard">伺服器分區 (REGION)</label>
+              <select id="credShard" class="tactical-input">
+                <option value="ap" selected>亞太地區 (AP - 台灣 / 香港 / 日本 / 東南亞)</option>
+                <option value="na">北美地區 (NA)</option>
+                <option value="eu">歐洲地區 (EU)</option>
+                <option value="kr">韓國地區 (KR)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="credUsername">RIOT 帳號 (USERNAME)</label>
+              <input type="text" id="credUsername" class="tactical-input" placeholder="請輸入 Riot 登入帳號" autocomplete="username" required />
+            </div>
+
+            <div class="form-group">
+              <label for="credPassword">RIOT 密碼 (PASSWORD)</label>
+              <div class="password-wrapper">
+                <input type="password" id="credPassword" class="tactical-input" placeholder="請輸入 Riot 帳號密碼" autocomplete="current-password" required />
+                <button type="button" class="btn-toggle-pwd" id="btnTogglePassword" title="顯示/隱藏密碼">👁️</button>
+              </div>
+            </div>
+
+            <div class="auth-msg error" id="credErrorMsg" style="display: none;"></div>
+
+            <button type="submit" class="tactical-action-btn primary-btn" id="btnSubmitCredentials" style="width: 100%;">
+              <span id="credSubmitText">立即登入帳號</span>
+              <span class="btn-spinner" id="credSpinner" style="display: none;"></span>
+            </button>
+          </form>
+
+          <!-- 2FA Verification Form (Initially Hidden) -->
+          <div class="mfa-section" id="mfaContainer" style="display: none;">
+            <div class="mfa-header">
+              <div class="mfa-shield-icon">🛡️</div>
+              <h3 class="mfa-title">雙重安全驗證 (2FA)</h3>
+              <p class="mfa-desc">
+                驗證代碼已發送至您的信箱：<br/>
+                <strong id="mfaEmailTip">email@***.com</strong>
+              </p>
+            </div>
+
+            <div class="form-group">
+              <input type="text" id="mfaCodeInput" class="tactical-input mfa-input" placeholder="------" maxlength="6" autocomplete="one-time-code" />
+            </div>
+
+            <div class="auth-msg error" id="mfaErrorMsg" style="display: none; margin-bottom: 0.75rem;"></div>
+
+            <div class="mfa-actions">
+              <button type="button" class="tactical-action-btn secondary-btn" id="btnBackToCred">返回修改</button>
+              <button type="button" class="tactical-action-btn primary-btn" id="btnSubmitMfa">
+                <span id="mfaBtnText">確認驗證碼</span>
+                <span class="btn-spinner" id="mfaSpinner" style="display: none;"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="security-tip">
+            <span class="tip-icon">🛡️</span>
+            <span><strong>Recon-Bolt 安全直連標準：</strong>帳號密碼僅直接傳送至 Riot 官方認證 API (auth.riotgames.com) 取得授權憑證，本站絕不保存密碼，支援完整 2FA 雙重驗證。</span>
+          </div>
+        </div>
+
+        <!-- Panel 2: Official Riot Web Auth -->
+        <div class="auth-panel" id="panelOfficial">
+          <div class="official-login-box">
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label for="officialShard">伺服器分區 (REGION)</label>
+              <select id="officialShard" class="tactical-input">
+                <option value="ap" selected>亞太地區 (AP - 台灣 / 香港 / 日本 / 東南亞)</option>
+                <option value="na">北美地區 (NA)</option>
+                <option value="eu">歐洲地區 (EU)</option>
+                <option value="kr">韓國地區 (KR)</option>
+              </select>
+            </div>
+
+            <div class="step-guide-box">
+              <div class="step-badge">步驟 1</div>
+              <p class="step-desc">點擊下方按鈕，在 <strong>Riot Games 官方網站</strong> 安全完成登入：</p>
+              <button type="button" class="tactical-action-btn primary-btn riot-auth-btn" id="btnLaunchOfficialAuth" style="margin-bottom: 0.5rem;">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="riot-fist-icon"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
+                <span id="officialAuthBtnText">前往 Riot 官方網站登入</span>
+                <span class="btn-spinner" id="officialAuthSpinner" style="display: none;"></span>
+              </button>
+            </div>
+
+            <div class="step-guide-box" style="margin-top: 1rem;">
+              <div class="step-badge">步驟 2</div>
+              <p class="step-desc">完成官方登入後，點擊下方「讀取剪貼簿」或貼上跳轉網址：</p>
+              
+              <button type="button" class="tactical-action-btn secondary-btn" id="btnQuickClipboardLoad" style="width: 100%; margin-bottom: 0.75rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan);">
+                📋 一鍵讀取剪貼簿並載入商城
+              </button>
+
+              <div class="url-input-wrapper">
+                <input type="text" id="officialRedirectUrl" class="tactical-input" placeholder="貼上跳轉網址 (http://localhost/redirect#... 或 Token)" autocomplete="off" />
+                <button type="button" class="btn-paste-clipboard" id="btnSubmitManualToken">確認載入</button>
+              </div>
+            </div>
+
+            <div class="auth-auto-indicator" id="authAutoIndicator" style="margin-top: 1rem;">
+              <span class="pulse-dot"></span>
+              <span id="authStatusText">本機模式支援自動偵測：若視窗跳轉成功將自動載入商城</span>
+            </div>
+
+            <div class="auth-msg error" id="officialErrorMsg" style="display: none; margin-top: 0.75rem;"></div>
+          </div>
+
+          <div class="security-tip">
+            <span class="tip-icon">🛡️</span>
+            <span><strong>合法官方原廠驗證：</strong>全程直接在 Riot 官方網站 (auth.riotgames.com) 輸入帳號密碼與 2FA 驗證碼，本站絕不接觸任何密碼，合法取得商城授權憑證。</span>
+          </div>
+        </div>
+
+        <!-- Panel: Lockfile Auto-Sync -->
+        <div class="auth-panel" id="panelLockfile">
+          <div class="lockfile-card">
+            <div class="lockfile-radar-icon">
+              <span class="radar-circle"></span>
+              <span class="radar-dot"></span>
+            </div>
+            <h3 class="lockfile-h3">本機特戰英豪客戶端連線</h3>
+            <p class="lockfile-p" id="lockfileStatusDetail">偵測中...</p>
+            <button class="tactical-action-btn primary-btn" id="btnSwitchLockfile">
+              一鍵同步本機特戰英豪帳號
+            </button>
+          </div>
+          <div class="security-tip">
+            <span class="tip-icon">🛡️</span>
+            <span><strong>零密碼保障：</strong>直接讀取電腦本機執行的 Riot Client 臨時憑證，絕無任何密碼外洩可能。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Skin Inspection (3D, Chromas, Levels, Videos) -->
+  <div class="modal-backdrop" id="inspectModal">
+    <div class="modal-dialog">
+      <button class="modal-close-btn" id="modalCloseBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <div class="modal-body">
+        <!-- Left: Big Weapon Render -->
+        <div class="modal-weapon-showcase">
+          <div class="modal-tier-badge" id="modalTierBadge">
+            <img id="modalTierIcon" src="" alt="Tier Icon" />
+            <span id="modalTierName">PREMIUM</span>
+          </div>
+
+          <div class="weapon-preview-stage">
+            <img id="modalWeaponImg" src="" alt="Weapon Skin" class="weapon-stage-img" />
+          </div>
+
+          <!-- Video Player if available -->
+          <div class="video-container" id="modalVideoContainer" style="display: none;">
+            <video id="modalVideoPlayer" controls autoplay muted loop playsinline></video>
+            <div class="video-overlay-tag">特效與終結動畫預覽</div>
+          </div>
+
+          <div class="showcase-controls">
+            <button class="mode-toggle-btn active" id="btnShowImage">槍枝外觀</button>
+            <button class="mode-toggle-btn" id="btnShowVideo" style="display: none;">特效動畫影片</button>
+          </div>
+        </div>
+
+        <!-- Right: Skin Details, Chromas, Levels -->
+        <div class="modal-weapon-details">
+          <div class="modal-header-meta">
+            <span class="modal-weapon-type" id="modalWeaponType">// 武器造型詳情</span>
+            <h2 class="modal-skin-name" id="modalSkinName">造型名稱</h2>
+            <div class="modal-price-chip" id="modalPriceChip">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
+              <span id="modalPriceVal">-- VP</span>
+            </div>
+          </div>
+
+          <!-- Chromas / Variants -->
+          <div class="detail-block">
+            <div class="block-title">炫彩換色 (CHROMAS)</div>
+            <div class="chromas-selector" id="modalChromas"></div>
+          </div>
+
+          <!-- Levels -->
+          <div class="detail-block">
+            <div class="block-title">升級等級 (LEVELS)</div>
+            <div class="levels-list" id="modalLevels"></div>
+          </div>
+
+          <!-- Wishlist Toggle -->
+          <div class="modal-actions">
+            <button class="tactical-action-btn wishlist-btn" id="modalWishlistToggle">
+              <span class="star-icon">⭐</span> 加入心願單
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=2.6"></script>
+</body>
+</html>
