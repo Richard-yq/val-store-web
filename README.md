@@ -108,25 +108,6 @@ python server.py
 
 ---
 
-## ☁️ Netlify 雲端免費一鍵部署指南
-
-想讓自己與好友在外隨時用手機看商城？部署到 Netlify 完全免費且支援永久線上運行：
-
-### 步驟 A：透過 GitHub 連動（推薦，支援自動更新）
-1. 將本專案 Fork 或 Push 至您個人的 GitHub 儲存庫。
-2. 前往 [Netlify 官網](https://www.netlify.com/) 登入。
-3. 點選 **"Add new site"** ➔ **"Import an existing project"** ➔ 選擇 **GitHub**。
-4. 選取剛剛建立的 `val-store-web` 儲存庫。
-5. 專案已附帶標準 `netlify.toml`，Build command 與 Publish directory 保持預設即可。
-6. 點擊 **"Deploy val-store-web"**，約 30 秒內即可取得您的專屬線上網址（例如：`https://your-name.netlify.app`）！
-
-### 步驟 B：Netlify Drop 拖曳上傳（免 Git 極速上線）
-1. 登入 [Netlify Drop](https://app.netlify.com/drop)。
-2. 將本專案資料夾直接拖曳丟入網頁虛線框中。
-3. 上傳解析完成後即可立即取得線上公開網址！
-
----
-
 ## 🔒 隱私與安全性保證 (Privacy & Security)
 
 1. **零第三方帳密儲存**：本專案不設有任何資料庫收集您的 Riot 帳號密碼。
