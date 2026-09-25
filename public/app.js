@@ -133,24 +133,6 @@ const DOM = {
   authSourceDot: document.getElementById('authSourceDot'),
   authSourceLabel: document.getElementById('authSourceLabel'),
   authTabBtns: document.querySelectorAll('.auth-tab-btn'),
-  panelCredentials: document.getElementById('panelCredentials'),
-  credentialsLoginForm: document.getElementById('credentialsLoginForm'),
-  credShard: document.getElementById('credShard'),
-  credUsername: document.getElementById('credUsername'),
-  credPassword: document.getElementById('credPassword'),
-  btnTogglePassword: document.getElementById('btnTogglePassword'),
-  credErrorMsg: document.getElementById('credErrorMsg'),
-  btnSubmitCredentials: document.getElementById('btnSubmitCredentials'),
-  credSubmitText: document.getElementById('credSubmitText'),
-  credSpinner: document.getElementById('credSpinner'),
-  mfaContainer: document.getElementById('mfaContainer'),
-  mfaEmailTip: document.getElementById('mfaEmailTip'),
-  mfaCodeInput: document.getElementById('mfaCodeInput'),
-  btnSubmitMfa: document.getElementById('btnSubmitMfa'),
-  mfaBtnText: document.getElementById('mfaBtnText'),
-  mfaSpinner: document.getElementById('mfaSpinner'),
-  mfaErrorMsg: document.getElementById('mfaErrorMsg'),
-  btnBackToCred: document.getElementById('btnBackToCred'),
   panelOfficial: document.getElementById('panelOfficial'),
   officialShard: document.getElementById('officialShard'),
   btnLaunchOfficialAuth: document.getElementById('btnLaunchOfficialAuth'),
@@ -222,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     DOM.authSourceDot.classList.add('credentials');
     DOM.authSourceLabel.textContent = "官方登入";
     renderDailyStore(null);
-    openAuthModal('credentials');
+    openAuthModal('official');
   }
 });
 
@@ -304,166 +286,6 @@ function initAuthModal() {
       switchAuthTab(btn.dataset.authtab);
     });
   });
-
-  // Toggle password visibility
-  if (DOM.btnTogglePassword && DOM.credPassword) {
-    DOM.btnTogglePassword.addEventListener('click', () => {
-      const isPwd = DOM.credPassword.type === 'password';
-      DOM.credPassword.type = isPwd ? 'text' : 'password';
-      DOM.btnTogglePassword.textContent = isPwd ? '🔒' : '👁️';
-    });
-  }
-
-  // Handle Credentials Login (Recon-Bolt standard direct API auth)
-  async function handleCredentialsLogin() {
-    const username = DOM.credUsername?.value.trim();
-    const password = DOM.credPassword?.value;
-    const shard = DOM.credShard?.value || 'ap';
-
-    if (!username || !password) {
-      if (DOM.credErrorMsg) {
-        DOM.credErrorMsg.style.display = 'block';
-        DOM.credErrorMsg.textContent = '請輸入 Riot 帳號與密碼！';
-      }
-      return;
-    }
-
-    localStorage.setItem('val_preferred_shard', shard);
-    if (DOM.credErrorMsg) DOM.credErrorMsg.style.display = 'none';
-    if (DOM.credSubmitText) DOM.credSubmitText.textContent = '正在連線 Riot 驗證...';
-    if (DOM.credSpinner) DOM.credSpinner.style.display = 'inline-block';
-    if (DOM.btnSubmitCredentials) DOM.btnSubmitCredentials.disabled = true;
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, shard })
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.status === 'success' && data.session) {
-        saveSession(data.session);
-        AudioFX.play('fanfare');
-        closeAuthModal();
-        await loadStoreData();
-      } else if (data.status === 'multifactor') {
-        STATE.mfaSessionData = {
-          sessionId: data.sessionId,
-          cookies: data.cookies,
-          shard: shard
-        };
-        if (DOM.credentialsLoginForm) DOM.credentialsLoginForm.style.display = 'none';
-        if (DOM.mfaContainer) DOM.mfaContainer.style.display = 'block';
-        if (DOM.mfaEmailTip) DOM.mfaEmailTip.textContent = data.email || '您的註冊信箱';
-        if (DOM.mfaCodeInput) {
-          DOM.mfaCodeInput.value = '';
-          DOM.mfaCodeInput.focus();
-        }
-      } else {
-        if (DOM.credErrorMsg) {
-          DOM.credErrorMsg.style.display = 'block';
-          DOM.credErrorMsg.textContent = data.message || '登入失敗，請確認帳號密碼後再試。';
-        }
-      }
-    } catch (err) {
-      if (DOM.credErrorMsg) {
-        DOM.credErrorMsg.style.display = 'block';
-        DOM.credErrorMsg.textContent = '連線失敗: ' + err.message;
-      }
-    } finally {
-      if (DOM.credSubmitText) DOM.credSubmitText.textContent = '立即登入帳號';
-      if (DOM.credSpinner) DOM.credSpinner.style.display = 'none';
-      if (DOM.btnSubmitCredentials) DOM.btnSubmitCredentials.disabled = false;
-    }
-  }
-
-  if (DOM.credentialsLoginForm) {
-    DOM.credentialsLoginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      handleCredentialsLogin();
-    });
-  }
-
-  if (DOM.btnSubmitCredentials) {
-    DOM.btnSubmitCredentials.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleCredentialsLogin();
-    });
-  }
-
-  // Handle MFA 2FA verification
-  async function handleMfaSubmit() {
-    const code = DOM.mfaCodeInput?.value.trim();
-    if (!code || code.length < 6) {
-      if (DOM.mfaErrorMsg) {
-        DOM.mfaErrorMsg.style.display = 'block';
-        DOM.mfaErrorMsg.textContent = '請輸入完整的 6 位數雙重驗證碼';
-      }
-      return;
-    }
-
-    if (DOM.mfaErrorMsg) DOM.mfaErrorMsg.style.display = 'none';
-    if (DOM.mfaBtnText) DOM.mfaBtnText.textContent = '驗證中...';
-    if (DOM.mfaSpinner) DOM.mfaSpinner.style.display = 'inline-block';
-    if (DOM.btnSubmitMfa) DOM.btnSubmitMfa.disabled = true;
-
-    try {
-      const res = await fetch('/api/auth/2fa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: STATE.mfaSessionData?.sessionId,
-          cookies: STATE.mfaSessionData?.cookies,
-          code: code,
-          shard: STATE.mfaSessionData?.shard || 'ap'
-        })
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.status === 'success' && data.session) {
-        saveSession(data.session);
-        AudioFX.play('fanfare');
-        closeAuthModal();
-        await loadStoreData();
-      } else {
-        if (DOM.mfaErrorMsg) {
-          DOM.mfaErrorMsg.style.display = 'block';
-          DOM.mfaErrorMsg.textContent = data.message || '驗證碼錯誤或已過期，請重新輸入。';
-        }
-      }
-    } catch (err) {
-      if (DOM.mfaErrorMsg) {
-        DOM.mfaErrorMsg.style.display = 'block';
-        DOM.mfaErrorMsg.textContent = '連線失敗: ' + err.message;
-      }
-    } finally {
-      if (DOM.mfaBtnText) DOM.mfaBtnText.textContent = '確認驗證碼';
-      if (DOM.mfaSpinner) DOM.mfaSpinner.style.display = 'none';
-      if (DOM.btnSubmitMfa) DOM.btnSubmitMfa.disabled = false;
-    }
-  }
-
-  if (DOM.btnSubmitMfa) {
-    DOM.btnSubmitMfa.addEventListener('click', handleMfaSubmit);
-  }
-
-  if (DOM.mfaCodeInput) {
-    DOM.mfaCodeInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleMfaSubmit();
-      }
-    });
-  }
-
-  if (DOM.btnBackToCred) {
-    DOM.btnBackToCred.addEventListener('click', () => {
-      if (DOM.mfaContainer) DOM.mfaContainer.style.display = 'none';
-      if (DOM.credentialsLoginForm) DOM.credentialsLoginForm.style.display = 'flex';
-      if (DOM.credErrorMsg) DOM.credErrorMsg.style.display = 'none';
-    });
-  }
 
   // Switch back to Lockfile
   DOM.btnSwitchLockfile.addEventListener('click', async () => {
@@ -570,8 +392,10 @@ function initAuthModal() {
     const shard = DOM.officialShard.value || 'ap';
     localStorage.setItem('val_preferred_shard', shard);
 
-    // Official Riot Sign-On URL with riot-client and in-game PVP scopes
-    const authUrl = `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=1`;
+    // Official Riot Sign-On URL with prompt=login and dynamic nonce
+    const nonce = Date.now();
+    const state = encodeURIComponent(window.location.origin);
+    const authUrl = `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=${nonce}&prompt=login&state=${state}`;
     
     // Open in dedicated popup or new tab so it's not blocked
     const width = 560;
@@ -669,21 +493,15 @@ function switchAuthTab(tabName) {
   DOM.authTabBtns.forEach(b => {
     b.classList.toggle('active', b.dataset.authtab === tabName);
   });
-  if (DOM.panelCredentials) DOM.panelCredentials.classList.toggle('active', tabName === 'credentials');
   if (DOM.panelOfficial) DOM.panelOfficial.classList.toggle('active', tabName === 'official');
   if (DOM.panelLockfile) DOM.panelLockfile.classList.toggle('active', tabName === 'lockfile');
 }
 
-function openAuthModal(defaultTab = 'credentials') {
+function openAuthModal(defaultTab = 'official') {
   DOM.authModal.classList.add('open');
-  if (DOM.credErrorMsg) DOM.credErrorMsg.style.display = 'none';
   if (DOM.officialErrorMsg) DOM.officialErrorMsg.style.display = 'none';
   resetAuthBtn();
   switchAuthTab(defaultTab);
-
-  if (defaultTab === 'credentials' && DOM.credUsername) {
-    setTimeout(() => DOM.credUsername.focus(), 80);
-  }
 
   fetch('/api/status').then(r => r.json()).then(status => {
     if (status.environment === 'netlify') {
@@ -816,15 +634,12 @@ function renderMainLoginCard() {
       <div class="empty-state-icon" style="font-size: 2.8rem; margin-bottom: 0.75rem;">🛡️</div>
       <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem; font-weight: 800; color: #fff; letter-spacing: 1px;">特戰英豪 帳號登入</h2>
       <p style="font-size: 0.92rem; margin-bottom: 1.5rem; color: var(--text-secondary); line-height: 1.5;">
-        請登入您的 Riot 帳號，以取得今日特選造型與夜市特惠！
+        請點擊下方透過 <strong>Riot 官方網站安全登入</strong>，以取得今日特選造型與夜市特惠！<br/>
+        <span style="font-size: 0.82rem; color: var(--val-cyan);">🔒 每次皆強制要求輸入帳密，密碼直接在原廠輸入，絕不經由第三方伺服器。</span>
       </p>
 
       <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
-        <button type="button" class="tactical-action-btn primary-btn" id="btnMainOpenCredentials" style="width: 100%; margin: 0; padding: 1rem 1.25rem; font-size: 1.05rem;">
-          <span>🔥 輸入 Riot 帳密快速登入 (Recon-Bolt 模式)</span>
-        </button>
-
-        <button type="button" class="tactical-action-btn secondary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 0.85rem 1.25rem; font-size: 0.95rem; border-color: rgba(255, 255, 255, 0.2);">
+        <button type="button" class="tactical-action-btn primary-btn riot-auth-btn" id="btnMainLaunchRiot" style="width: 100%; margin: 0; padding: 1.15rem 1.25rem; font-size: 1.05rem; font-weight: 800;">
           <svg viewBox="0 0 24 24" fill="currentColor" class="riot-fist-icon"><path d="M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z"/></svg>
           <span>🌐 前往 Riot 官方網站登入 (auth.riotgames.com)</span>
         </button>
@@ -841,10 +656,14 @@ function renderMainLoginCard() {
         </div>
       </div>
 
-      <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap;">
         <button type="button" class="btn-text-link" id="btnMainSyncLockfile" style="color: var(--val-cyan); font-size: 0.9rem;">
           🎮 電腦正在執行特戰英豪？點此一鍵免登入同步
         </button>
+        <span style="color: rgba(255,255,255,0.2);">|</span>
+        <a href="https://auth.riotgames.com/logout" target="_blank" rel="noopener noreferrer" style="color: var(--text-muted); font-size: 0.82rem; text-decoration: underline;">
+          🔄 切換帳號？點此登出 Riot 官方 Session
+        </a>
       </div>
     </div>`;
 
@@ -852,19 +671,13 @@ function renderMainLoginCard() {
 }
 
 function initMainCardEvents() {
-  const btnMainOpenCredentials = document.getElementById('btnMainOpenCredentials');
-  if (btnMainOpenCredentials) {
-    btnMainOpenCredentials.onclick = () => {
-      AudioFX.play('click');
-      openAuthModal('credentials');
-    };
-  }
-
   const btnMainLaunchRiot = document.getElementById('btnMainLaunchRiot');
   if (btnMainLaunchRiot) {
     btnMainLaunchRiot.onclick = () => {
       AudioFX.play('click');
-      const authUrl = `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=1`;
+      const nonce = Date.now();
+      const state = encodeURIComponent(window.location.origin);
+      const authUrl = `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=${nonce}&prompt=login&state=${state}`;
       window.open(authUrl, '_blank');
     };
   }
