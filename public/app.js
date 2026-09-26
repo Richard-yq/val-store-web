@@ -163,29 +163,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.location.hash && window.location.hash.includes('access_token=')) {
     const rawHash = window.location.hash;
     history.replaceState(null, document.title, window.location.pathname + window.location.search);
-    if (DOM.statusText) {
-      DOM.statusText.textContent = "● 官方登入成功，正在獲取商城資料...";
-      DOM.statusText.style.color = "var(--nm-purple)";
-    }
-    try {
-      const preferredShard = localStorage.getItem('val_preferred_shard') || 'ap';
-      const res = await fetch('/api/auth/token-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urlOrToken: rawHash, shard: preferredShard })
-      });
-      const data = await res.json();
-      if (res.ok && data.status === 'success' && data.session) {
-        saveSession(data.session);
-        AudioFX.play('fanfare');
-        closeAuthModal();
-      } else {
-        console.error("Auto hash login failed:", data);
-        alert("Riot 官方授權失敗：" + (data.message || "驗證逾時或失效"));
-      }
-    } catch (e) {
-      console.warn("Auto hash login failed:", e);
-    }
+    const preferredShard = localStorage.getItem('val_preferred_shard') || 'ap';
+    await executeTokenLogin(rawHash, preferredShard);
   }
 
   // Load saved session if exists
@@ -267,6 +246,82 @@ function initRefresh() {
   });
 }
 
+// Reset button state helper
+function resetAuthBtn() {
+  if (DOM.btnLaunchOfficialAuth) {
+    DOM.btnLaunchOfficialAuth.disabled = false;
+    DOM.officialAuthBtnText.textContent = "前往 Riot 官方網站登入";
+    DOM.officialAuthSpinner.style.display = 'none';
+    DOM.authAutoIndicator.classList.remove('waiting');
+    DOM.authStatusText.textContent = "支援自動偵測：跳轉完成或複製網址後切回此頁面將自動載入商城";
+  }
+  if (DOM.officialErrorMsg) DOM.officialErrorMsg.style.display = 'none';
+}
+
+// Build Official Riot Sign-On URL
+function buildRiotAuthUrl() {
+  const nonce = Date.now();
+  const currentOrigin = (window.location.origin && !window.location.origin.includes('localhost'))
+    ? window.location.origin
+    : 'https://venerable-cheesecake-da5d83.netlify.app';
+  const state = encodeURIComponent(currentOrigin);
+
+  // If user configured a custom approved RSO Client ID
+  const customClientId = localStorage.getItem('val_rso_client_id');
+  if (customClientId) {
+    const customRedirect = encodeURIComponent(`${currentOrigin}/redirect`);
+    return `https://auth.riotgames.com/authorize?redirect_uri=${customRedirect}&client_id=${encodeURIComponent(customClientId)}&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=${nonce}&prompt=login&state=${state}`;
+  }
+
+  // Official Riot Client OAuth Flow
+  // Riot's authorization server strictly whitelists 'http://localhost/redirect' for client_id=riot-client.
+  // The 'state' parameter passes our deployed Netlify origin for automated callback redirection.
+  return `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=${nonce}&prompt=login&state=${state}`;
+}
+
+// Execute Token Login
+async function executeTokenLogin(urlOrToken, shard) {
+  if (!urlOrToken) return;
+  if (DOM.officialErrorMsg) DOM.officialErrorMsg.style.display = 'none';
+  if (DOM.officialAuthBtnText) DOM.officialAuthBtnText.textContent = "正在驗證特戰英豪授權...";
+  if (DOM.officialAuthSpinner) DOM.officialAuthSpinner.style.display = 'inline-block';
+  if (DOM.btnLaunchOfficialAuth) DOM.btnLaunchOfficialAuth.disabled = true;
+  if (DOM.statusText) {
+    DOM.statusText.textContent = "● 官方登入成功，正在獲取商城資料...";
+    DOM.statusText.style.color = "var(--nm-purple)";
+  }
+
+  try {
+    const res = await fetch('/api/auth/token-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urlOrToken: urlOrToken.trim(), shard: shard || 'ap' })
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.status === 'success') {
+      if (data.session) {
+        saveSession(data.session);
+      }
+      AudioFX.play('fanfare');
+      closeAuthModal();
+      await loadStoreData();
+    } else {
+      if (DOM.officialErrorMsg) {
+        DOM.officialErrorMsg.style.display = 'block';
+        DOM.officialErrorMsg.textContent = data.message || "登入授權失敗，請確認已在 Riot 完成驗證。";
+      }
+      resetAuthBtn();
+    }
+  } catch (err) {
+    if (DOM.officialErrorMsg) {
+      DOM.officialErrorMsg.style.display = 'block';
+      DOM.officialErrorMsg.textContent = "連線失敗: " + err.message;
+    }
+    resetAuthBtn();
+  }
+}
+
 // Authentication Modal Logic
 function initAuthModal() {
   DOM.btnOpenAuthModal.addEventListener('click', () => {
@@ -279,7 +334,7 @@ function initAuthModal() {
     if (e.target === DOM.authModal) closeAuthModal();
   });
 
-  // Switch between Tabs (Credentials, Official, Lockfile)
+  // Switch between Tabs
   DOM.authTabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       AudioFX.play('click');
@@ -293,7 +348,7 @@ function initAuthModal() {
     DOM.btnSwitchLockfile.disabled = true;
     DOM.btnSwitchLockfile.textContent = "正在同步本機遊戲...";
     try {
-      clearSession(); // Remove manual session to trigger lockfile fallback
+      clearSession();
       const res = await fetch('/api/auth/switch-lockfile', { method: 'POST' });
       await res.json();
       closeAuthModal();
@@ -305,18 +360,6 @@ function initAuthModal() {
       DOM.btnSwitchLockfile.textContent = "一鍵同步本機特戰英豪帳號";
     }
   });
-
-  // Reset button state helper
-  function resetAuthBtn() {
-    if (DOM.btnLaunchOfficialAuth) {
-      DOM.btnLaunchOfficialAuth.disabled = false;
-      DOM.officialAuthBtnText.textContent = "前往 Riot 官方網站登入";
-      DOM.officialAuthSpinner.style.display = 'none';
-      DOM.authAutoIndicator.classList.remove('waiting');
-      DOM.authStatusText.textContent = "支援自動偵測：跳轉完成或複製網址後切回此頁面將自動載入商城";
-    }
-    if (DOM.officialErrorMsg) DOM.officialErrorMsg.style.display = 'none';
-  }
 
   // Quick Clipboard Load
   const btnQuickClipboardLoad = document.getElementById('btnQuickClipboardLoad');
@@ -348,54 +391,15 @@ function initAuthModal() {
     });
   }
 
-  // Execute Token Login
-  async function executeTokenLogin(urlOrToken, shard) {
-    if (!urlOrToken) return;
-    DOM.officialErrorMsg.style.display = 'none';
-    DOM.officialAuthBtnText.textContent = "正在驗證特戰英豪授權...";
-    DOM.officialAuthSpinner.style.display = 'inline-block';
-    DOM.btnLaunchOfficialAuth.disabled = true;
-
-    try {
-      const res = await fetch('/api/auth/token-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urlOrToken: urlOrToken.trim(), shard: shard || 'ap' })
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.status === 'success') {
-        if (data.session) {
-          saveSession(data.session);
-        }
-        AudioFX.play('fanfare');
-        closeAuthModal();
-        await loadStoreData();
-      } else {
-        DOM.officialErrorMsg.style.display = 'block';
-        DOM.officialErrorMsg.textContent = data.message || "登入授權失敗，請確認已在 Riot 完成驗證。";
-        resetAuthBtn();
-      }
-    } catch (err) {
-      DOM.officialErrorMsg.style.display = 'block';
-      DOM.officialErrorMsg.textContent = "連線失敗: " + err.message;
-      resetAuthBtn();
-    }
-  }
-
   // Launch Riot Official Auth directly
   DOM.btnLaunchOfficialAuth.addEventListener('click', () => {
     AudioFX.play('click');
     DOM.officialErrorMsg.style.display = 'none';
 
-    const origin = window.location.origin;
     const shard = DOM.officialShard.value || 'ap';
     localStorage.setItem('val_preferred_shard', shard);
 
-    // Official Riot Sign-On URL with prompt=login and dynamic nonce
-    const nonce = Date.now();
-    const state = encodeURIComponent(window.location.origin);
-    const authUrl = `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=${nonce}&prompt=login&state=${state}`;
+    const authUrl = buildRiotAuthUrl();
     
     // Open in dedicated popup or new tab so it's not blocked
     const width = 560;
@@ -443,15 +447,19 @@ function initAuthModal() {
   });
 
   // 4. Focus / Visibility listener (automatically checks clipboard if copied)
+  let isTokenLoggingIn = false;
   async function checkClipboardForToken() {
-    if (!STATE.session) {
+    if (!STATE.session && !isTokenLoggingIn) {
       try {
         const clip = await navigator.clipboard.readText();
         if (clip && (clip.includes('access_token=') || clip.startsWith('eyJ'))) {
           const shard = DOM.officialShard?.value || localStorage.getItem('val_preferred_shard') || 'ap';
+          isTokenLoggingIn = true;
           await executeTokenLogin(clip, shard);
         }
-      } catch(e) {}
+      } catch(e) {} finally {
+        setTimeout(() => { isTokenLoggingIn = false; }, 2000);
+      }
     }
   }
 
@@ -487,6 +495,15 @@ function initAuthModal() {
   }
 
   if (DOM.officialRedirectUrl) {
+    const handleAutoTokenInput = async () => {
+      const val = DOM.officialRedirectUrl.value.trim();
+      if (val.includes('access_token=') || (val.startsWith('eyJ') && val.length > 50)) {
+        const shard = DOM.officialShard.value || 'ap';
+        await executeTokenLogin(val, shard);
+      }
+    };
+    DOM.officialRedirectUrl.addEventListener('input', handleAutoTokenInput);
+    DOM.officialRedirectUrl.addEventListener('paste', () => setTimeout(handleAutoTokenInput, 50));
     DOM.officialRedirectUrl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -655,7 +672,8 @@ function renderMainLoginCard() {
       <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem; margin-bottom: 1.25rem; text-align: left;">
         <div style="font-size: 0.85rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上跳轉網址或讀取剪貼簿：</div>
         <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5;">
-          📱 <strong>跨裝置 / 手機登入提示：</strong>登入後若網址跳轉至 <code>localhost/redirect#access_token=...</code>（顯示連線失敗為 Riot 官方原廠機制），請<strong>直接複製上方網址列整行連結</strong>，切回此頁面點擊「一鍵讀取剪貼簿」即可瞬間載入商城！
+          📱 <strong>跨裝置 / 手機登入提示：</strong>登入後若網址跳轉至 <code>localhost/redirect#access_token=...</code>（顯示連線失敗為 Riot 原廠機制），請<strong>直接複製上方網址列整行連結</strong>，切回此頁面點擊「一鍵讀取剪貼簿」即可瞬間載入商城！<br/>
+          ⚡ 或在跳轉網址將 <code>localhost</code> 改為 <code>venerable-cheesecake-da5d83.netlify.app</code> 亦可由系統自動接軌載入。
         </div>
         <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.75rem; font-weight: 700;">
           📋 一鍵讀取剪貼簿並載入商城
@@ -685,9 +703,7 @@ function initMainCardEvents() {
   if (btnMainLaunchRiot) {
     btnMainLaunchRiot.onclick = () => {
       AudioFX.play('click');
-      const nonce = Date.now();
-      const state = encodeURIComponent(window.location.origin);
-      const authUrl = `https://auth.riotgames.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%2Fredirect&client_id=riot-client&response_type=token%20id_token&scope=openid%20link%20ban%20lol_region&nonce=${nonce}&prompt=login&state=${state}`;
+      const authUrl = buildRiotAuthUrl();
       window.open(authUrl, '_blank');
     };
   }
@@ -733,13 +749,23 @@ function initMainCardEvents() {
   }
 
   if (mainRedirectUrlInput) {
-    mainRedirectUrlInput.onkeydown = (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        btnMainSubmitUrl?.click();
+    const handleMainAutoTokenInput = async () => {
+      const val = mainRedirectUrlInput.value.trim();
+      if (val.includes('access_token=') || (val.startsWith('eyJ') && val.length > 50)) {
+        const shard = (typeof mainShardSelect !== 'undefined' ? mainShardSelect?.value : null) || DOM.officialShard?.value || localStorage.getItem('val_preferred_shard') || 'ap';
+        await executeTokenLogin(val, shard);
       }
     };
+    mainRedirectUrlInput.addEventListener('input', handleMainAutoTokenInput);
+    mainRedirectUrlInput.addEventListener('paste', () => setTimeout(handleMainAutoTokenInput, 50));
+    mainRedirectUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (btnMainSubmitUrl) btnMainSubmitUrl.click();
+      }
+    });
   }
+
 
   const btnMainSyncLockfile = document.getElementById('btnMainSyncLockfile');
   if (btnMainSyncLockfile) {

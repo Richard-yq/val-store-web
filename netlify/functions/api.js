@@ -46,20 +46,7 @@ exports.handler = async (event, context) => {
       return jsonResponse(ASSETS_CACHE.allSkins || []);
     }
 
-    // 3. Username & Password Login
-    if (path === "/auth/login" && method === "POST") {
-      const body = JSON.parse(event.body || "{}");
-      const { username, password, shard = "ap" } = body;
-
-      if (!username || !password) {
-        return jsonResponse({ status: "error", message: "請輸入 Riot 帳號與密碼" }, 400);
-      }
-
-      const loginRes = await handleRiotLogin(username, password, shard);
-      return jsonResponse(loginRes);
-    }
-
-    // 3.5. Official Token / Redirect URL Login
+    // 3. Official Token / Redirect URL Login
     if (path === "/auth/token-login" && method === "POST") {
       const body = JSON.parse(event.body || "{}");
       const urlOrToken = (body.urlOrToken || body.url || "").trim();
@@ -73,18 +60,12 @@ exports.handler = async (event, context) => {
       return jsonResponse(tokenRes);
     }
 
-    // 4. Two-Factor Authentication (2FA) Submit
-    if (path === "/auth/2fa" && method === "POST") {
-      const body = JSON.parse(event.body || "{}");
-      const cookies = body.cookies || body.sessionId;
-      const { code, shard = "ap" } = body;
-
-      if (!cookies || !code) {
-        return jsonResponse({ status: "error", message: "缺少驗證憑證或驗證碼" }, 400);
-      }
-
-      const mfaRes = await handleRiotMfa(cookies, code, shard);
-      return jsonResponse(mfaRes);
+    // Deprecated: Username & Password Login (Disabled for security)
+    if (path === "/auth/login" || path === "/auth/2fa") {
+      return jsonResponse({
+        status: "error",
+        message: "為保障帳號安全，本站不經手任何密碼。請透過 Riot 官方網站安全跳轉登入 (Token Flow)。"
+      }, 403);
     }
 
     // 5. Store & Night Market Fetch
@@ -234,101 +215,7 @@ function resolveSkin(itemId) {
   };
 }
 
-// Riot Remote Login Implementation (Stateless with Cookie Passing)
-async function handleRiotLogin(username, password, shard) {
-  const userAgent = "RiotClient/99.0.0.1234567.9876543 rso-auth (Windows;10;;Professional, x64)";
-  
-  // Step 1: Initialize Auth
-  const initRes = await fetch("https://auth.riotgames.com/api/v1/authorization", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "RiotClient/99.0.0.1234567.9876543 rso-auth (Windows;10;;Professional, x64)"
-    },
-    body: JSON.stringify({
-      client_id: "riot-client",
-      nonce: "1",
-      redirect_uri: "http://localhost/redirect",
-      response_type: "token id_token",
-      scope: "openid link ban lol_region"
-    })
-  });
-
-  // Extract set-cookie
-  const rawCookies = initRes.headers.get("set-cookie") || "";
-  const cookieHeader = parseCookieHeader(rawCookies);
-
-  // Step 2: PUT credentials
-  const authRes = await fetch("https://auth.riotgames.com/api/v1/authorization", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": userAgent,
-      "Cookie": cookieHeader
-    },
-    body: JSON.stringify({
-      type: "auth",
-      username,
-      password,
-      remember: true,
-      language: "zh_TW"
-    })
-  });
-
-  const authData = await authRes.json();
-  const step2Cookies = parseCookieHeader(authRes.headers.get("set-cookie") || "", cookieHeader);
-
-  // 2FA required
-  if (authData.type === "multifactor") {
-    return {
-      status: "multifactor",
-      cookies: step2Cookies,
-      email: authData.multifactor?.email || "註冊信箱"
-    };
-  }
-
-  // Auth failure
-  if (authData.error === "auth_failure") {
-    return { status: "error", message: "Riot 帳號或密碼錯誤，請重新確認。" };
-  }
-
-  if (authData.type === "response") {
-    const uri = authData.response?.parameters?.uri || "";
-    return exchangeTokensAndBuildSession(uri, shard);
-  }
-
-  return { status: "error", message: "未預期的認證回應: " + authData.type };
-}
-
-async function handleRiotMfa(cookies, code, shard) {
-  const userAgent = "RiotClient/99.0.0.1234567.9876543 rso-auth (Windows;10;;Professional, x64)";
-  const res = await fetch("https://auth.riotgames.com/api/v1/authorization", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": userAgent,
-      "Cookie": cookies
-    },
-    body: JSON.stringify({
-      type: "multifactor",
-      code: code.trim(),
-      rememberDevice: true
-    })
-  });
-
-  const data = await res.json();
-  if (data.error) {
-    return { status: "error", message: "驗證碼無效或已過期，請重新確認。" };
-  }
-
-  if (data.type === "response") {
-    const uri = data.response?.parameters?.uri || "";
-    return exchangeTokensAndBuildSession(uri, shard);
-  }
-
-  return { status: "error", message: "雙重驗證失敗，請重試。" };
-}
-
+// Riot Token Exchange Implementation (Zero Password - 100% Client-Side Credentials)
 async function exchangeTokensAndBuildSession(uri, shard = "ap") {
   try {
     let accessToken = null;
@@ -338,6 +225,11 @@ async function exchangeTokensAndBuildSession(uri, shard = "ap") {
     if (cleanStr.includes("#")) {
       const fragment = cleanStr.split("#")[1];
       const params = new URLSearchParams(fragment);
+      accessToken = params.get("access_token");
+      idToken = params.get("id_token");
+    } else if (cleanStr.includes("?")) {
+      const query = cleanStr.split("?")[1];
+      const params = new URLSearchParams(query);
       accessToken = params.get("access_token");
       idToken = params.get("id_token");
     } else if (cleanStr.includes("access_token=")) {
@@ -450,24 +342,6 @@ async function exchangeTokensAndBuildSession(uri, shard = "ap") {
   }
 }
 
-function parseCookieHeader(setCookieStr, existing = "") {
-  const cookies = {};
-  if (existing) {
-    existing.split(";").forEach(c => {
-      const [k, v] = c.trim().split("=");
-      if (k && v) cookies[k] = v;
-    });
-  }
-  if (setCookieStr) {
-    // Split on comma not in expiration date
-    const parts = setCookieStr.split(/,(?=\s*[a-zA-Z0-9_-]+=)/);
-    for (const p of parts) {
-      const match = p.trim().match(/^([^=]+)=([^;]+)/);
-      if (match) cookies[match[1]] = match[2];
-    }
-  }
-  return Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join("; ");
-}
 
 // Fetch Storefront V3 & Wallet using user's tokens
 async function fetchStoreData(accessToken, entitlementsToken, puuid, shard) {

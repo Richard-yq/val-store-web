@@ -168,7 +168,8 @@
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem; margin-bottom: 1.25rem; text-align: left;">
               <div style="font-size: 0.85rem; color: var(--val-cyan); font-weight: 700; margin-bottom: 0.4rem;">官方網站登入完成？貼上跳轉網址或讀取剪貼簿：</div>
               <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5;">
-                📱 <strong>跨裝置 / 手機登入提示：</strong>登入後若網址跳轉至 <code>localhost/redirect#access_token=...</code>（顯示連線失敗為 Riot 官方原廠機制），請<strong>直接複製上方網址列整行連結</strong>，切回此頁面點擊「一鍵讀取剪貼簿」即可瞬間載入商城！
+                📱 <strong>跨裝置 / 手機登入提示：</strong>登入後若網址跳轉至 <code>localhost/redirect#access_token=...</code>（顯示連線失敗為 Riot 官方原廠機制），請<strong>直接複製上方網址列整行連結</strong>，切回此頁面點擊「一鍵讀取剪貼簿」即可瞬間載入商城！<br/>
+                ⚡ 或在跳轉網址將 <code>localhost</code> 改為 <code>venerable-cheesecake-da5d83.netlify.app</code> 亦可由系統自動接軌載入。
               </div>
               <button type="button" class="tactical-action-btn secondary-btn" id="btnMainClipboardLoad" style="width: 100%; margin-bottom: 0.6rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan); padding: 0.75rem; font-weight: 700;">
                 📋 一鍵讀取剪貼簿並載入商城
@@ -333,6 +334,9 @@
             <div class="step-guide-box" style="margin-top: 1rem;">
               <div class="step-badge">步驟 2</div>
               <p class="step-desc">完成官方登入後，點擊下方「讀取剪貼簿」或貼上跳轉網址：</p>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5;">
+                📱 <strong>跨裝置 / 手機提示：</strong>複製官方跳轉之網址（含 <code>access_token=</code>），點擊下方按鈕或切回本頁面即可自動載入！
+              </div>
               
               <button type="button" class="tactical-action-btn secondary-btn" id="btnQuickClipboardLoad" style="width: 100%; margin-bottom: 0.75rem; border-color: rgba(0, 245, 212, 0.4); color: var(--val-cyan);">
                 📋 一鍵讀取剪貼簿並載入商城

@@ -5,6 +5,12 @@
 [functions]
   node_bundler = "esbuild"
 
+# Netlify OAuth Redirect Page
+[[redirects]]
+  from = "/redirect"
+  to = "/redirect.html"
+  status = 200
+
 # Proxy /api requests to Netlify Serverless Functions
 [[redirects]]
   from = "/api/*"

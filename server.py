@@ -894,28 +894,11 @@ class ValStoreHandler(SimpleHTTPRequestHandler):
             self.send_json(result, status=status_code)
             return
 
-        elif self.path.startswith("/api/auth/login"):
-            username = body.get("username", "").strip()
-            password = body.get("password", "")
-            shard = body.get("shard", "ap")
-            if not username or not password:
-                self.send_json({"status": "error", "message": "請輸入 Riot 帳號與密碼"}, status=400)
-                return
-            result = riot_remote_login(username, password, shard)
-            status_code = 200 if result.get("status") in ["success", "multifactor"] else 400
-            self.send_json(result, status=status_code)
-            return
-
-        elif self.path.startswith("/api/auth/2fa"):
-            session_id = body.get("sessionId") or body.get("cookies")
-            code = body.get("code", "").strip()
-            shard = body.get("shard", "ap")
-            if not session_id or not code:
-                self.send_json({"status": "error", "message": "請輸入完整的雙重驗證碼"}, status=400)
-                return
-            result = riot_verify_2fa(session_id, code, shard)
-            status_code = 200 if result.get("status") == "success" else 400
-            self.send_json(result, status=status_code)
+        elif self.path.startswith("/api/auth/login") or self.path.startswith("/api/auth/2fa"):
+            self.send_json({
+                "status": "error",
+                "message": "為保障帳號安全，本站不經手任何密碼。請透過 Riot 官方網站安全跳轉登入 (Token Flow)。"
+            }, status=403)
             return
 
         elif self.path.startswith("/api/auth/switch-lockfile"):
@@ -968,7 +951,7 @@ class ValStoreHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
-OAUTH_REDIRECT_HTML = """<!DOCTYPE html>
+OAUTH_REDIRECT_HTML = r"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">

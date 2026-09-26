@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VALORANT PROTOCOL // 官方認證跳轉中</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff4655'><path d='M12 2L3 9l9 13 9-13-9-7zm0 3.5L17.5 9 12 18 6.5 9 12 5.5z'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Rajdhani:wght@600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b1118;
+      --card-bg: rgba(15, 25, 35, 0.95);
+      --val-red: #ff4655;
+      --val-cyan: #00f5d4;
+      --text-main: #ece8e1;
+      --text-muted: #8b97a5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 50% 20%, rgba(0, 245, 212, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(255, 70, 85, 0.08) 0%, transparent 50%);
+      color: var(--text-main);
+      font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .redirect-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(0, 245, 212, 0.3);
+      border-radius: 10px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 245, 212, 0.15);
+      max-width: 480px;
+      width: 100%;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .redirect-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--val-cyan), var(--val-red));
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--val-cyan);
+      background: rgba(0, 245, 212, 0.1);
+      border: 1px solid rgba(0, 245, 212, 0.25);
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 1.25rem;
+      text-transform: uppercase;
+    }
+
+    .status-icon-wrapper {
+      margin: 1rem auto 1.5rem;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .spinner {
+      width: 54px;
+      height: 54px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--val-cyan);
+      border-right-color: var(--val-cyan);
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    }
+
+    .icon-success {
+      display: none;
+      font-size: 2.8rem;
+      color: var(--val-cyan);
+      animation: popIn 0.3s ease;
+    }
+
+    .icon-error {
+      display: none;
+      font-size: 2.8rem;
+      color: var(--val-red);
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Rajdhani', 'Noto Sans TC', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 0.6rem;
+      color: #fff;
+    }
+
+    p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.9rem 1.25rem;
+      font-family: 'Rajdhani', 'Noto Sans TC', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #0f1923;
+      background: var(--val-cyan);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: #38ffdf;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 245, 212, 0.4);
+    }
+
+    .tip-box {
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="redirect-card">
+    <div class="badge">VALORANT PROTOCOL // AUTH CALLBACK</div>
+    
+    <div class="status-icon-wrapper">
+      <div class="spinner" id="loadingSpinner"></div>
+      <div class="icon-success" id="successIcon">✓</div>
+      <div class="icon-error" id="errorIcon">✕</div>
+    </div>
+
+    <h1 id="statusTitle">官方授權傳送中...</h1>
+    <p id="statusDesc">正在讀取 Riot 原廠安全憑證，並同步回特戰英豪商城...</p>
+
+    <a href="/" class="action-btn" id="btnReturnStore" style="display: none;">
+      進入特戰英豪商城
+    </a>
+
+    <div class="tip-box" id="tipBox">
+      💡 <strong>跨裝置支援：</strong>此頁面會自動透過跨分頁通訊（BroadcastChannel / Storage / Opener）將 Token 傳遞給主頁面。若未自動跳轉，可直接點擊上方按鈕進入商城。
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      const spinner = document.getElementById('loadingSpinner');
+      const successIcon = document.getElementById('successIcon');
+      const errorIcon = document.getElementById('errorIcon');
+      const title = document.getElementById('statusTitle');
+      const desc = document.getElementById('statusDesc');
+      const btn = document.getElementById('btnReturnStore');
+
+      // Check for errors returned in query params
+      const searchParams = new URLSearchParams(search);
+      const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+      const error = searchParams.get('error') || hashParams.get('error');
+      const errorDesc = searchParams.get('error_description') || hashParams.get('error_description');
+
+      if (error) {
+        spinner.style.display = 'none';
+        errorIcon.style.display = 'block';
+        title.textContent = 'Riot 授權未完成';
+        desc.textContent = errorDesc ? decodeURIComponent(errorDesc) : `登入過程遭取消或發生錯誤 (${error})`;
+        btn.style.display = 'inline-flex';
+        btn.textContent = '返回首頁重新登入';
+        btn.href = '/';
+        return;
+      }
+
+      // Check if access_token exists in hash or search
+      const hasAccessToken = hash.includes('access_token=') || search.includes('access_token=');
+      const tokenPayload = hasAccessToken ? (hash.includes('access_token=') ? hash : search) : '';
+
+      if (tokenPayload) {
+        // 1. Post to opener window if opened in popup
+        let sentToOpener = false;
+        if (window.opener && !window.opener.closed) {
+          try {
+            window.opener.postMessage({ type: 'RIOT_AUTH_TOKEN', hash: tokenPayload }, '*');
+            sentToOpener = true;
+          } catch (e) {
+            console.warn('postMessage to opener failed:', e);
+          }
+        }
+
+        // 2. BroadcastChannel for cross-tab communication
+        try {
+          const bc = new BroadcastChannel('riot_auth_channel');
+          bc.postMessage({ type: 'RIOT_AUTH_TOKEN', hash: tokenPayload });
+          setTimeout(() => bc.close(), 1000);
+        } catch (e) {
+          console.warn('BroadcastChannel failed:', e);
+        }
+
+        // 3. LocalStorage event fallback
+        try {
+          localStorage.setItem('val_auth_hash', tokenPayload);
+        } catch (e) {
+          console.warn('localStorage set failed:', e);
+        }
+
+        // Update UI to success
+        spinner.style.display = 'none';
+        successIcon.style.display = 'block';
+        title.textContent = '官方驗證成功！';
+        desc.textContent = '已成功取得特戰英豪授權憑證，正在為您載入商城...';
+        btn.style.display = 'inline-flex';
+        btn.href = '/' + (tokenPayload.startsWith('#') ? tokenPayload : '#' + tokenPayload);
+
+        // Determine destination:
+        // Priority: state param target -> window.location.origin
+        let targetOrigin = window.location.origin;
+        const stateParam = hashParams.get('state') || searchParams.get('state');
+        if (stateParam) {
+          try {
+            const decoded = decodeURIComponent(stateParam);
+            if (decoded.startsWith('http')) {
+              targetOrigin = decoded.replace(/\/+$/, '');
+            }
+          } catch (e) {}
+        }
+
+        const destination = targetOrigin + '/' + (tokenPayload.startsWith('#') ? tokenPayload : '#' + tokenPayload);
+        btn.href = destination;
+
+        // Auto close if popup, otherwise auto-redirect to main app
+        if (sentToOpener) {
+          setTimeout(() => {
+            try { window.close(); } catch (e) {}
+          }, 600);
+        } else {
+          setTimeout(() => {
+            window.location.replace(destination);
+          }, 600);
+        }
+      } else {
+        // No token found
+        spinner.style.display = 'none';
+        errorIcon.style.display = 'block';
+        title.textContent = '未檢測到登入憑證';
+        desc.textContent = '請從首頁點擊「前往 Riot 官方網站安全登入」以完成驗證。';
+        btn.style.display = 'inline-flex';
+        btn.href = '/';
+      }
+    })();
+  </script>
+</body>
+</html>
